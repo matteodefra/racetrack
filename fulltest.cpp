@@ -3,16 +3,11 @@
 #include "utils/utimer.hpp"
 #include "utils/heuristic.h"
 #include "utils/pruning.h"
-// #include <queue>
-// #include <set>
-// #include <map>
-// #include <numeric>
-// #include <iostream>
-// #include <fstream>
+#include <iostream>
+#include <fstream>
 #include <mutex>
 #include <omp.h>
 #include <sstream>
-// #include <string>
 
 using namespace std;
 
@@ -172,18 +167,6 @@ int main(int argc, const char * argv[]) {
       }
     }
 
-
-    cout << "Final cost DJK: " << dijkstra_opt << endl;
-
-    
-
-    cout << "Final cost A*: " << astar_opt << endl;
-
-       
-    
-    cout << "Final cost DP: " << dp_opt << endl;
-
-
   }
 
   std::stringstream ss;
@@ -193,6 +176,13 @@ int main(int argc, const char * argv[]) {
   res << "Dijk " << total_dijkstra << endl;
   res << "Astar " << total_astar << endl;
   res << "DP " << total_ourdp << endl;
+
+  
+  // ofstream myfile;
+  // myfile.open("output/"+ss.str() +".txt");
+  // cout << myfile.is_open() << endl;
+  // myfile << res.str() << endl;
+  // myfile.close();
 
   return 0;
 }
