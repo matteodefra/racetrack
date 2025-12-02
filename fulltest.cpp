@@ -2,6 +2,7 @@
 #include "utils/solvers.h"
 #include "utils/utimer.hpp"
 #include "utils/heuristic.h"
+#include "utils/pruning.h"
 // #include <queue>
 // #include <set>
 // #include <map>
@@ -15,7 +16,7 @@
 
 using namespace std;
 
-auto bi_vectors_per_city(const vector<int>& xs, const vector<int>& ys, vector<UniVec> &univecs, bool heur, vector<vector<int>>& heuristics){
+auto bi_vectors_per_city(vector<int>& xs, vector<int>& ys, vector<UniVec> &univecs, bool heur, vector<vector<int>>& heuristics, bool filter, int S){
   int n = xs.size();
 
   auto bivecs = bi_vectors(univecs);
@@ -32,9 +33,15 @@ auto bi_vectors_per_city(const vector<int>& xs, const vector<int>& ys, vector<Un
   for (int i=1; i<n-1; i++){
     for (auto bivec: bivecs){     
       // cout << cond << endl;
-      counter += 1;
-      result[i].push_back(bivec);
-      if (heur) heuristics[i].push_back(computeheur( bivec, univecs, xs, ys, i ));
+      if (filter) {
+        cond = filteringS(bivec, univecs, xs, ys, i, S);
+      }
+      if (!cond) {
+        counter += 1;
+        result[i].push_back(bivec);
+        if (heur) heuristics[i].push_back(computeheur( bivec, univecs, xs, ys, i ));
+      }
+      
     }
   }
   //cout << "Bivecs used: " << counter << endl;
@@ -52,12 +59,11 @@ int trivialsolution(vector<int> &xs, vector<int> &ys ) {
   auto univecs = uni_vectors(1);
   UniProfile X(xs, univecs);
   UniProfile Y(ys, univecs);
-  vector<vector<BiVec>> bivecs = bi_vectors_per_city(xs, ys, univecs, false, heuristics);
+  vector<vector<BiVec>> bivecs = bi_vectors_per_city(xs, ys, univecs, false, heuristics, false, 0);
 
   int S = solve(X, Y, bivecs, univecs, xs, ys);
   //cout << "First trivial solution: " << S << endl;
-
-  return S/4;
+  return S;
 }
 
 
@@ -92,7 +98,7 @@ int main(int argc, const char * argv[]) {
     allxs[t][n-1] = allxs[t][0]; allys[t][n-1] = allys[t][0]; // setting last equal to first
   }
 
-  omp_set_max_active_levels(2);
+  // omp_set_max_active_levels(2);
   
   // #pragma omp parallel num_threads(trials)
   for (int t=0; t<trials; t++) {
@@ -102,14 +108,17 @@ int main(int argc, const char * argv[]) {
 
     vector<vector<int>> heuristics(n, vector<int>());
 
+    // smax heuristic (sqrt(D))
+    // int smax = compute_smax( xs, ys );
     
     // smax from safe solutions
-    int smax = trivialsolution( xs, ys );
+    int S = trivialsolution( xs, ys );
+    int smax = S/4;
 
     auto univecs = uni_vectors(smax);
     UniProfile X(xs, univecs);
     UniProfile Y(ys, univecs);
-    vector<vector<BiVec>> bivecs = bi_vectors_per_city(xs, ys, univecs, heur, heuristics);
+    vector<vector<BiVec>> bivecs = bi_vectors_per_city(xs, ys, univecs, heur, heuristics, true, S);
     // cout << "profiles OK" << endl;
 
     int dijkstra_opt;
