@@ -21,6 +21,31 @@ Point midpoint(const Point& a, const Point& b) {
 }
   
 
+/**
+ * Filtering based on S total cost
+ */
+bool filteringS(const BiVec bivec, const vector<UniVec>& univecs, const vector<int>& xs, const vector<int>& ys, int city, int tottime){
+  int n = xs.size();
+
+  int x_from = univecs[bivec.ind_x].from;
+  int x_to = univecs[bivec.ind_x].to;
+  int y_from = univecs[bivec.ind_y].from;
+  int y_to = univecs[bivec.ind_y].to;
+  
+  Interval one_x = compute_interval( xs[0], 0, xs[city]+x_to, x_to-x_from );
+  Interval one_y = compute_interval( ys[0], 0, ys[city]+y_to, y_to-y_from );
+
+  int t1 = min_value( one_x, one_y);
+
+
+  Interval two_x = compute_interval( xs[city]+x_to, x_to-x_from, xs[n-1], 0 );
+  Interval two_y = compute_interval( ys[city]+y_to, y_to-y_from, ys[n-1], 0 );
+
+  int t2 = min_value( two_x, two_y );
+
+  return (t1+t2)<=tottime;
+}
+
 bool separating_hyperplane( double m, double q, double xtest, double ytest, bool equality ) {
   if (equality) return (ytest <= m*xtest + q);
   else return (ytest < m*xtest + q);
