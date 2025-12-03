@@ -21,6 +21,9 @@ auto computetime( BiVec bivec, const vector<UniVec>& univecs, const vector<int>&
   if (isx) headvector = univecs[bivec.ind_x].to;
   else headvector = univecs[bivec.ind_y].to;
 
+  if (speed >= 0 ) direction=1;
+  else direction = 0;
+
   // std::cout << "Starting from city " << current_city <<  " with pos " << city << std::endl;
   // std::cout << "Speed vector " << speed << std::endl;
 
@@ -28,87 +31,74 @@ auto computetime( BiVec bivec, const vector<UniVec>& univecs, const vector<int>&
   while (j<n-1) {
     int jx = cities[j];
     // std::cout << "next pos " << jx << std::endl;
-    if (direction==-1) {
-      if (jx >= city) { 
-        // std::cout << "first city greater setting direction 1" << std::endl;
-        last = jx;
-        direction = 1;
-      } else { 
-        // std::cout << "first city smaller setting direction 0" << std::endl;
-        direction=0;
-        last = jx;
-      }
-      // j += 1;
-    } else {
-      if (jx==last) {
-        last = jx;
-      } else if (jx > last && direction==1) {
-        // std::cout << "continuing good direction 1" << std::endl;
-        last = jx;
-      } else if (jx > last && direction==0) {
-        // std::cout << "reversing direction" << std::endl;
-        // accumulate cost
-        direction=1;
-        if (!firsttime) {
-          firsttime = true;
-          // compute the landing point
-          int dist = (abs(speed)*(abs(speed)-1))/2;
-          if (speed<0) landingpoint = (initial+headvector) - dist;
-          else landingpoint = (initial+headvector) + dist;
+    if (jx==last) {
+      last = jx;
+    } else if (jx > last && direction==1) {
+      // std::cout << "continuing good direction 1" << std::endl;
+      last = jx;
+    } else if (jx > last && direction==0) {
+      // std::cout << "reversing direction" << std::endl;
+      // accumulate cost
+      direction=1;
+      if (!firsttime) {
+        firsttime = true;
+        // compute the landing point
+        int dist = (abs(speed)*(abs(speed)-1))/2;
+        if (speed<0) landingpoint = (initial+headvector) - dist;
+        else landingpoint = (initial+headvector) + dist;
 
-          // the landing point is far away then the reversing point => 
-          if (landingpoint < last) {
-            Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
-            total += interv.t3;
-            initial = landingpoint;
-          } else {
-            Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-            total += interv.t3;
-            initial = last;
-          }
-          // total += (interv.t1==-1) ? interv.t3 : interv.t1;
+        // the landing point is far away then the reversing point => 
+        if (landingpoint < last) {
+          Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
+          total += (interv.t1==-1) ? interv.t3 : interv.t1;
+          // total += min_value(interv, {0,0,0});
+          initial = landingpoint;
         } else {
-          Interval interv = compute_interval( initial, 0, last, 0 );
-          // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-          total += interv.t3;
+          Interval interv = compute_interval( initial+headvector, speed, last, 0 );
+          total += (interv.t1==-1) ? interv.t3 : interv.t1;
           initial = last;
         }
-        // std::cout << "Accumulated cost up to now " << total << std::endl; 
-        last=jx;
-      } else if (jx<last && direction==0) {
-        // std::cout << "continuing good direction 0" << std::endl;
-        last = jx;
-      } else if (jx<last && direction==1) {
-        // std::cout << "reversing direction" << std::endl;
-        // accumulate cost
-        direction=0;
-        if (!firsttime) {
-          firsttime = true;
-          // compute the landing point
-          int dist = (abs(speed)*(abs(speed)-1))/2;
-          if (speed<0) landingpoint = (initial+headvector) - dist;
-          else landingpoint = (initial+headvector) + dist;
-
-          // the landing point is far away then the reversing point => 
-          if (landingpoint >= last) {
-            Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
-            total += interv.t3;
-            initial = landingpoint;
-          } else {
-            Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-            total += interv.t3;
-            initial = last;
-          }
-        } else {
-          Interval interv = compute_interval( initial, 0, last, 0 );
-          // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-          total += interv.t3;
-          initial = last;
-        } 
-        // std::cout << "Accumulated cost up to now " << total << std::endl; 
-        last=jx;
+        // total += (interv.t1==-1) ? interv.t3 : interv.t1;
+      } else {
+        Interval interv = compute_interval( initial, 0, last, 0 );
+        total += (interv.t1==-1) ? interv.t3 : interv.t1;
+        // total += interv.t3;
+        initial = last;
       }
+      // std::cout << "Accumulated cost up to now " << total << std::endl; 
+      last=jx;
+    } else if (jx<last && direction==0) {
+      // std::cout << "continuing good direction 0" << std::endl;
+      last = jx;
+    } else if (jx<last && direction==1) {
+      // std::cout << "reversing direction" << std::endl;
+      // accumulate cost
+      direction=0;
+      if (!firsttime) {
+        firsttime = true;
+        // compute the landing point
+        int dist = (abs(speed)*(abs(speed)-1))/2;
+        if (speed<0) landingpoint = (initial+headvector) - dist;
+        else landingpoint = (initial+headvector) + dist;
 
+        // the landing point is far away then the reversing point => 
+        if (landingpoint >= last) {
+          Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
+          total += (interv.t1==-1) ? interv.t3 : interv.t1;
+          initial = landingpoint;
+        } else {
+          Interval interv = compute_interval( initial+headvector, speed, last, 0 );
+          total += (interv.t1==-1) ? interv.t3 : interv.t1;
+          initial = last;
+        }
+      } else {
+        Interval interv = compute_interval( initial, 0, last, 0 );
+        // total += (interv.t1==-1) ? interv.t3 : interv.t1;
+        total += (interv.t1==-1) ? interv.t3 : interv.t1;
+        initial = last;
+      } 
+      // std::cout << "Accumulated cost up to now " << total << std::endl; 
+      last=jx;
     }
 
     j+=1;
@@ -120,12 +110,12 @@ auto computetime( BiVec bivec, const vector<UniVec>& univecs, const vector<int>&
     if (!firsttime) {
       firsttime = true;
       Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-      // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      total += interv.t3;
+      total += (interv.t1==-1) ? interv.t3 : interv.t1;
+      // total += interv.t3;
     } else {
       Interval interv = compute_interval( initial, 0, last, 0 );
-      // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      total += interv.t3;
+      total += (interv.t1==-1) ? interv.t3 : interv.t1;
+      // total += interv.t3;
     } 
   }
   else if (jx > last && direction==1) {
@@ -133,12 +123,12 @@ auto computetime( BiVec bivec, const vector<UniVec>& univecs, const vector<int>&
     if (!firsttime) {
       firsttime = true;
       Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-      // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      total += interv.t3;
+      total += (interv.t1==-1) ? interv.t3 : interv.t1;
+      // total += interv.t3;
     } else {
       Interval interv = compute_interval( initial, 0, last, 0 );
-      // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      total += interv.t3;
+      total += (interv.t1==-1) ? interv.t3 : interv.t1;
+      // total += interv.t3;
     } 
     // std::cout << "Accumulated cost up to now " << total << std::endl; 
   } else if (jx > last && direction==0) {
@@ -154,35 +144,37 @@ auto computetime( BiVec bivec, const vector<UniVec>& univecs, const vector<int>&
       // the landing point is far away then the reversing point => 
       if (landingpoint < last) {
         Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
-        total += interv.t3;
+        total += (interv.t1==-1) ? interv.t3 : interv.t1;
+        // total += interv.t3;
         initial = landingpoint;
       } else {
         Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-        total += interv.t3;
+        total += (interv.t1==-1) ? interv.t3 : interv.t1;
+        // total += interv.t3;
         initial = last;
       }
     } else {
       Interval interv = compute_interval( initial, 0, last, 0 );
-      // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      total += interv.t3;
+      total += (interv.t1==-1) ? interv.t3 : interv.t1;
+      // total += interv.t3;
       initial = last;
     } 
     last=jx;
     Interval interv = compute_interval( initial, 0, last, 0 );
-    // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-    total += interv.t3;
+    total += (interv.t1==-1) ? interv.t3 : interv.t1;
+    // total += interv.t3;
     // std::cout << "Accumulated cost up to now " << total << std::endl; 
   } else if (jx<last && direction==0) {
     last = jx;
     if (!firsttime) {
       firsttime = true;
       Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-      // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      total += interv.t3;
+      total += (interv.t1==-1) ? interv.t3 : interv.t1;
+      // total += interv.t3;
     } else {
       Interval interv = compute_interval( initial, 0, last, 0 );
-      // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      total += interv.t3;
+      total += (interv.t1==-1) ? interv.t3 : interv.t1;
+      // total += interv.t3;
     } 
     // std::cout << "Accumulated cost up to now " << total << std::endl; 
   } else if (jx<last && direction==1) {
@@ -196,31 +188,33 @@ auto computetime( BiVec bivec, const vector<UniVec>& univecs, const vector<int>&
       else landingpoint = (initial+headvector) + dist;
 
       // the landing point is far away then the reversing point => 
-      if (landingpoint >= last) {
+      if (landingpoint > last) {
         Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
-        total += interv.t3;
+        total += (interv.t1==-1) ? interv.t3 : interv.t1;
+        // total += interv.t3;
         initial = landingpoint;
       } else {
         Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-        total += interv.t3;
+        total += (interv.t1==-1) ? interv.t3 : interv.t1;
         initial = last;
       }
     } else {
       Interval interv = compute_interval( initial, 0, last, 0 );
-      // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      total += interv.t3;
+      total += (interv.t1==-1) ? interv.t3 : interv.t1;
+      // total += interv.t3;
       initial = last;
     } 
     last=jx;    
     Interval interv = compute_interval( initial, 0, last, 0 );
-    // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-    total += interv.t3;
-  } else if (direction==-1) {
-    last = jx;
-    Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-    // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-    total += interv.t3;
-  }
+    total += (interv.t1==-1) ? interv.t3 : interv.t1;
+    // total += interv.t3;
+  } 
+  // else {
+  //   last = jx;
+  //   Interval interv = compute_interval( initial+headvector, speed, last, 0 );
+  //   total += (interv.t1==-1) ? interv.t3 : interv.t1;
+  //   // total += interv.t3;
+  // }
   // total += 1;
   // std::cout << "Total heuristic for this bivec " << total << std::endl;
 
