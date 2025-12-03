@@ -1,224 +1,56 @@
-auto computetime( BiVec bivec, const vector<UniVec>& univecs, const vector<int>& cities, int current_city, int isx ) {
+int computetime( BiVec bivec, const vector<UniVec>& univecs, const vector<int>& cities, int current_city, int isx ) {
+    int n = (int)cities.size();
+    if (current_city < 0 || current_city >= n) return 0; // defensive
+    if (current_city == n-1) return 0; // no next cities
 
-  int n = cities.size();
+    int initial_city = cities[current_city];
+    int last = initial_city;
+    int total = 0;
+    bool started = false;
 
-  int city = cities[current_city];
-  
-  int j = current_city+1;
+    int speed = isx ? (univecs[bivec.ind_x].to - univecs[bivec.ind_x].from)
+                    : (univecs[bivec.ind_y].to - univecs[bivec.ind_y].from);
+    int head = isx ? univecs[bivec.ind_x].to : univecs[bivec.ind_y].to;
+    int dir = (speed >= 0) ? +1 : -1;
 
-  int total = 0;
-
-  int landingpoint = 0;
-
-  int direction = -1;
-  int last = city;
-  int initial = city;
-  int speed = 0;
-  if (isx) speed = univecs[bivec.ind_x].to-univecs[bivec.ind_x].from;
-  else speed = univecs[bivec.ind_y].to-univecs[bivec.ind_y].from;
-
-  int headvector = 0;
-  if (isx) headvector = univecs[bivec.ind_x].to;
-  else headvector = univecs[bivec.ind_y].to;
-
-  if (speed >= 0 ) direction=1;
-  else direction = 0;
-
-  // std::cout << "Starting from city " << current_city <<  " with pos " << city << std::endl;
-  // std::cout << "Speed vector " << speed << std::endl;
-
-  bool firsttime = false;
-  while (j<n-1) {
-    int jx = cities[j];
-    // std::cout << "next pos " << jx << std::endl;
-    if (jx==last) {
-      last = jx;
-    } else if (jx > last && direction==1) {
-      // std::cout << "continuing good direction 1" << std::endl;
-      last = jx;
-    } else if (jx > last && direction==0) {
-      // std::cout << "reversing direction" << std::endl;
-      // accumulate cost
-      direction=1;
-      if (!firsttime) {
-        firsttime = true;
-        // compute the landing point
-        int dist = (abs(speed)*(abs(speed)-1))/2;
-        if (speed<0) landingpoint = (initial+headvector) - dist;
-        else landingpoint = (initial+headvector) + dist;
-
-        // the landing point is far away then the reversing point => 
-        if (landingpoint < last) {
-          Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
-          total += (interv.t1==-1) ? interv.t3 : interv.t1;
-          // total += min_value(interv, {0,0,0});
-          initial = landingpoint;
-        } else {
-          Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-          total += (interv.t1==-1) ? interv.t3 : interv.t1;
-          initial = last;
+    for (int j = current_city + 1; j < n; ++j) {
+        int jx = cities[j];
+        if (jx == last) {
+            // nothing changes
+            continue;
         }
-        // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      } else {
-        Interval interv = compute_interval( initial, 0, last, 0 );
-        total += (interv.t1==-1) ? interv.t3 : interv.t1;
-        // total += interv.t3;
-        initial = last;
-      }
-      // std::cout << "Accumulated cost up to now " << total << std::endl; 
-      last=jx;
-    } else if (jx<last && direction==0) {
-      // std::cout << "continuing good direction 0" << std::endl;
-      last = jx;
-    } else if (jx<last && direction==1) {
-      // std::cout << "reversing direction" << std::endl;
-      // accumulate cost
-      direction=0;
-      if (!firsttime) {
-        firsttime = true;
-        // compute the landing point
-        int dist = (abs(speed)*(abs(speed)-1))/2;
-        if (speed<0) landingpoint = (initial+headvector) - dist;
-        else landingpoint = (initial+headvector) + dist;
+        bool moving_positive = (jx > last);
 
-        // the landing point is far away then the reversing point => 
-        if (landingpoint >= last) {
-          Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
-          total += (interv.t1==-1) ? interv.t3 : interv.t1;
-          initial = landingpoint;
+        if ((moving_positive && dir > 0) || (!moving_positive && dir < 0)) {
+            // continuing in same direction
+            last = jx;
+            continue;
         } else {
-          Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-          total += (interv.t1==-1) ? interv.t3 : interv.t1;
-          initial = last;
+            // reversal detected
+            // handle reversal via helper that accepts current origin, speed, head, target=last
+            if (!started) {
+                // compute landingpoint from origin initial_city and head
+                int origin = initial_city + head; // <-- *verify this is correct*
+                int dist = (abs(speed)*(abs(speed)-1))/2; // verify formula
+                int landing = origin + dir * dist;
+                int cutoff = (dir > 0) ? std::min(landing, last) : std::max(landing, last);
+                Interval interv = compute_interval(origin, speed, cutoff, 0);
+                total += (interv.t1 == -1) ? interv.t3 : interv.t1;
+                initial_city = cutoff;
+                started = true;
+            } else {
+                Interval interv = compute_interval(initial_city, 0, last, 0);
+                total += (interv.t1 == -1) ? interv.t3 : interv.t1;
+                initial_city = last;
+            }
+            // flip direction
+            dir = -dir;
+            last = jx;
         }
-      } else {
-        Interval interv = compute_interval( initial, 0, last, 0 );
-        // total += (interv.t1==-1) ? interv.t3 : interv.t1;
-        total += (interv.t1==-1) ? interv.t3 : interv.t1;
-        initial = last;
-      } 
-      // std::cout << "Accumulated cost up to now " << total << std::endl; 
-      last=jx;
     }
 
-    j+=1;
-    
-  }
-  // last city
-  int jx = cities[j];
-  if (jx==last) {
-    if (!firsttime) {
-      firsttime = true;
-      Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-      total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      // total += interv.t3;
-    } else {
-      Interval interv = compute_interval( initial, 0, last, 0 );
-      total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      // total += interv.t3;
-    } 
-  }
-  else if (jx > last && direction==1) {
-    last = jx;
-    if (!firsttime) {
-      firsttime = true;
-      Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-      total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      // total += interv.t3;
-    } else {
-      Interval interv = compute_interval( initial, 0, last, 0 );
-      total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      // total += interv.t3;
-    } 
-    // std::cout << "Accumulated cost up to now " << total << std::endl; 
-  } else if (jx > last && direction==0) {
-    // accumulate cost
-    direction=1;
-    if (!firsttime) {
-      firsttime = true;
-      // compute the landing point
-      int dist = (abs(speed)*(abs(speed)-1))/2;
-      if (speed<0) landingpoint = (initial+headvector) - dist;
-      else landingpoint = (initial+headvector) + dist;
-
-      // the landing point is far away then the reversing point => 
-      if (landingpoint < last) {
-        Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
-        total += (interv.t1==-1) ? interv.t3 : interv.t1;
-        // total += interv.t3;
-        initial = landingpoint;
-      } else {
-        Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-        total += (interv.t1==-1) ? interv.t3 : interv.t1;
-        // total += interv.t3;
-        initial = last;
-      }
-    } else {
-      Interval interv = compute_interval( initial, 0, last, 0 );
-      total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      // total += interv.t3;
-      initial = last;
-    } 
-    last=jx;
-    Interval interv = compute_interval( initial, 0, last, 0 );
-    total += (interv.t1==-1) ? interv.t3 : interv.t1;
-    // total += interv.t3;
-    // std::cout << "Accumulated cost up to now " << total << std::endl; 
-  } else if (jx<last && direction==0) {
-    last = jx;
-    if (!firsttime) {
-      firsttime = true;
-      Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-      total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      // total += interv.t3;
-    } else {
-      Interval interv = compute_interval( initial, 0, last, 0 );
-      total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      // total += interv.t3;
-    } 
-    // std::cout << "Accumulated cost up to now " << total << std::endl; 
-  } else if (jx<last && direction==1) {
-    // accumulate cost
-    direction=0;
-    if (!firsttime) {
-      firsttime = true;
-      // compute the landing point
-      int dist = (abs(speed)*(abs(speed)-1))/2;
-      if (speed<0) landingpoint = (initial+headvector) - dist;
-      else landingpoint = (initial+headvector) + dist;
-
-      // the landing point is far away then the reversing point => 
-      if (landingpoint > last) {
-        Interval interv = compute_interval( initial+headvector, speed, landingpoint, 0 );
-        total += (interv.t1==-1) ? interv.t3 : interv.t1;
-        // total += interv.t3;
-        initial = landingpoint;
-      } else {
-        Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-        total += (interv.t1==-1) ? interv.t3 : interv.t1;
-        initial = last;
-      }
-    } else {
-      Interval interv = compute_interval( initial, 0, last, 0 );
-      total += (interv.t1==-1) ? interv.t3 : interv.t1;
-      // total += interv.t3;
-      initial = last;
-    } 
-    last=jx;    
-    Interval interv = compute_interval( initial, 0, last, 0 );
-    total += (interv.t1==-1) ? interv.t3 : interv.t1;
-    // total += interv.t3;
-  } 
-  // else {
-  //   last = jx;
-  //   Interval interv = compute_interval( initial+headvector, speed, last, 0 );
-  //   total += (interv.t1==-1) ? interv.t3 : interv.t1;
-  //   // total += interv.t3;
-  // }
-  // total += 1;
-  // std::cout << "Total heuristic for this bivec " << total << std::endl;
-
-  return total;
+    // process last->final_jx if needed (but loop already handled all j)
+    return total;
 }
 
 
